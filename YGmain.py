@@ -5,28 +5,33 @@ from account import FcoinAccount
 import configparser
 from strategy import Macd
 import time
+from log import Log
 
 macd = Macd.Macd()
 
 def strategy(account, klines, strategy, simulate):
     if strategy == "macd":
-        cmd, kline = macd.getCmd(klines)
-        print(cmd)
+        operate, kline = macd.getCmd(klines)
+        print(operate.cmd)
         kline.print_kline()
         if simulate:
-            if cmd == "buy":
-                account.simulateBuy(klines[0])
-            elif cmd == "sell":
-                account.simulateSell(klines[0])
+            if operate.cmd == "buy":
+                account.simulateBuy(kline, operate)
+            elif operate.cmd == "sell":
+                account.simulateSell(kline)
         else:
-            if cmd == "buy":
+            if operate.cmd == "buy":
                 account.buy(1)
-            elif cmd == "sell":
+            elif operate.cmd == "sell":
                 account.sell(1)
 
 
 def simulateMarket(account):
     klines = account.getSimulateKlines()
+    # klines = macd.getMacdInfo(klines)
+    # for kline in klines:
+    #     Log.Log.getInstance().logKline(kline)
+    # klines.reverse()
 
     while len(klines) > 200:
         sublines = klines[0:200]
@@ -35,11 +40,15 @@ def simulateMarket(account):
 
 def realMarket(account):
     while True:
-        klines, hasNew = account.getKlines()
-        print(hasNew)
-        if hasNew is True:
-            strategy(account, klines, "macd", False)
-        time.sleep(30)
+        try:
+            klines, hasNew = account.getKlines()
+            print(hasNew)
+            if hasNew is True:
+                strategy(account, klines, "macd", False)
+        except Exception as ex:
+            Log.Log.getInstance().log('run error {0}'.format(ex))
+        finally:
+            time.sleep(30)
 
 def run(market, apiKey, secret):
     if market == "okex":

@@ -5,15 +5,19 @@ import math as math
 from market import Kline
 from strategy import Kdj
 from operator import attrgetter
+import utils.GlobalModel as gl
+from utils import KlineUtil
+from strategy import Operate
 
 kdj = Kdj.Kdj()
 
 class Macd(object):
 
-    next_cmd = "see"
+    next_operate = Operate.Operate("see", "观望")
 
     def __init__(self):
         print()
+
 
     def getMacdInfo(self, klines):
         if len(klines) == 0:
@@ -45,82 +49,82 @@ class Macd(object):
                 klines[i].cha = 1
         return klines
 
-    def findCha(self, klines, count):
-        assert isinstance(klines, list)
-
-        chalist = []
-
-        for i in range(0, len(klines) - 1):
-            if klines[i].cha != None:
-                chalist.append(klines[i])
-                if len(chalist) >= count:
-                    return chalist
-        return chalist
-
-
-
-
-    def needBuy(self, new, olds):
+    def macdTech(self, new, olds):
         assert isinstance(new, Kline.Kline)
         assert isinstance(olds, list)
 
-
-        #
-        # #rule1 MACD零轴附近金叉 (30min 小于 8)
-        # if new.macd > 0 and olds[0].macd < 0 and math.fabs(float(new.dif)) < 8:
-        #     return "buy"
-
-        #rule2 MACD低位金叉的买点(先观望，往前在找一个金叉，如果小于自己，则买入)
-        if new.macd > 0 and olds[0].macd < 0 and new.dif < 0:
-            lastTwoCha = self.findCha(olds, 2)
-            if lastTwoCha[1].dif < new.dif:
-                return "buy"
-
-        #rule3 MACD零轴上方形成二次金叉
+        #1 漫步青云(零轴之上死叉 然后下穿0轴，然后在上升0轴之上金叉)
         if new.macd > 0 and olds[0].macd < 0 and new.dif > 0:
-            lastTwoCha = self.findCha(olds, 2)
-            if len(lastTwoCha) == 2:
-                if lastTwoCha[0].dif < new.dif:
-                    return "buy"
+            indexs, crosses = KlineUtil.KlineUtil.findCross(olds, 1)
+            if len(crosses) == 1:
+                lastCrossKline = crosses[0]
+                if lastCrossKline.dif > 0:
+                    for i in range(0, indexs[0] + 1):
+                        if olds[i].dif < 0:
+                            return Operate.Operate("buy", "漫步青云")
+
+        #2 天鹏展翅(0轴以下金叉，但没有上穿0轴就回调了，但没有死叉就再次反转向上)
+        if new.macd > olds[0].macd:
+            indexs, crosses = KlineUtil.KlineUtil.findCross(olds, 1)
+            if len(crosses) == 1:
+                lastCrossKline = crosses[0]
+                if lastCrossKline.isJinCha() and lastCrossKline.dif < 0:
+                    trends = KlineUtil.KlineUtil.findKlinesTrends(olds, 0, indexs[0])
+                    if len(trends) == 2 and trends[0] == gl.gl_macd_rise and trends[1] == gl.gl_macd_drop:
+                        if KlineUtil.KlineUtil.findRangeBelowValue(olds, 0, indexs[0], 0):
+                            return Operate.Operate("buy", "天棚展翅")
+
+        #rule3 空中缆绳(先有一段升降趋势，然后DIF和DEA在零轴之上持续搅合一段时间，然后突然DIF突然分开，形成买点)
+        #暂时将macd小于0.5认为两条线搅合在一起
+        if new.macd > olds[0].macd and new.dif > 0 and new.macd > 0.5 and math.fabs(olds[0].macd) < 0.5:
+            stirCount = 1
+
+            for index in range(len(olds)):
+                if math.fabs(olds[index].macd) < 0.5 and olds[index].dif > 0:
+                    stirCount = stirCount + 1
+                else:
+                    if stirCount > 3:
+                        trends = KlineUtil.KlineUtil.findKlinesTrends(olds, index, len(olds) - 1)
+                        if len(trends) >= 2 and trends[0] == gl.gl_macd_rise and trends[1] == gl.gl_macd_drop:
+                            return Operate.Operate("buy", "空中缆绳")
+                    break
+
+        #rule4  空中缆车(零轴之上死叉，但不下穿零轴，过几天再次在零轴之上金叉 看看需不需要考虑放量)
+        if new.macd > 0 and olds[0].macd < 0 and new.dif > 0:
+            indexs, crosses = KlineUtil.KlineUtil.findCross(olds, 1)
+            if len(crosses) == 1:
+                lastCrossKline = crosses[0]
+                if lastCrossKline.dif > 0:
+                    if KlineUtil.KlineUtil.findRangeAboveValue(olds, 0, indexs[0], 0):
+                        trends = KlineUtil.KlineUtil.findKlinesTrends(olds, 0, indexs[0])
+                        if len(trends) == 2 and trends[0] == gl.gl_macd_drop and trends[1] == gl.gl_macd_rise:
+                            return Operate.Operate("buy", "空中缆车")
+
+        #rule5 海底电缆(零轴一下金叉，然后DIF和DEA线粘合起来在零轴以下运行很长时间(暂时认为15分钟)，然后开始发散，形成买点)
+        if new.macd > olds[0].macd and new.dif < 0:
+            if KlineUtil.KlineUtil.findRangeBelowValue(olds, 0, min(15, len(olds) - 1), 0):
+                stirCount = 0
+                for i in range(0, min(20, len(olds))):
+                    if math.fabs(olds[i].macd) < 0.5 and olds[i].dif < 0:
+                        stirCount = stirCount + 1
+                    else:
+                        break
+                if stirCount >= 15:
+                    return Operate.Operate("buy", "海底电缆")
+
+        #rule6 海底捞月(零轴以下二次金叉)
+        if new.macd > 0 and olds[0].macd < 0 and new.dif < 0:
+            indexes, crosses = KlineUtil.KlineUtil.findCross(olds, 2)
+            if len(crosses) == 2:
+                if KlineUtil.KlineUtil.findRangeBelowValue(olds, 0, indexes[1], 0):
+                    return Operate.Operate("buy", "海底捞月")
 
 
-        return "see"
-
-    def needSell(self, new, olds):
-        assert isinstance(new, Kline.Kline)
-        assert isinstance(olds, list)
-
-
-        #rule2 MACD 零轴下方死叉
-        if new.macd <= 0 and olds[0].macd > 0:
-            return "sell"
-
-        return "see"
-        
-
-    #DIF线 上穿DEA线(分0线下方和0线上方)
-    def isJingCha(self, new, olds):
-        assert isinstance(new, Kline.Kline)
-        assert isinstance(olds, list)
-
-        # dif刚开始上穿金叉线
-        if  new.macd > 0 and olds[0].macd < 0 :
-            return "buy"
-        else:
-            return "see"
-
-    # DIF线 下穿DEA线(分0线下方和0线上方)
-    def isSiCha(self, new, olds):
-        assert isinstance(new, Kline.Kline)
-        assert isinstance(olds, list)
-
-        # dif刚开始下穿金叉线
+        #rule7 死叉卖出?
         if new.macd < 0 and olds[0].macd > 0:
-            return "sell"
-        else:
-            return "see"
+            return Operate.Operate("sell", "死叉")
 
-
+        return Operate.Operate("see", "观望")
 
     def getCmd(self, klines):
         klines = self.getMacdInfo(klines)
@@ -128,27 +132,25 @@ class Macd(object):
         last = klines[1]
         olds = klines[2:]
 
-        cmd = self.needBuy(last, olds)
-        if cmd == "see":
-            cmd = self.needSell(last, olds)
+        operate = self.macdTech(last, olds)
 
-        if cmd != "see" and self.next_cmd == "see":
-            self.next_cmd = cmd
+        if operate.cmd != "see":
+            self.next_operate = operate
 
-        if self.next_cmd == "buy":
-            if last.k < 20:
-                cmd = "buy"
+        if self.next_operate.cmd == "buy":
+            if last.k < 18:
+                operate = self.next_operate
             else:
-                cmd = "see"
-        if self.next_cmd == "sell":
-            print('sell')
-            last.print_kline()
-            if last.k > 80 or last.d > 80:
-                cmd = "sell"
+                operate.cmd = "see"
+                operate.description = "观望"
+        if self.next_operate.cmd == "sell":
+            if last.k > 82:
+                operate = self.next_operate
             else:
-                cmd = "see"
+                operate.cmd = "see"
+                operate.description = "观望"
 
-        if cmd != "see":
-            self.next_cmd = "see"
+        if operate.cmd != "see":
+            self.next_operate = Operate.Operate("see", "观望")
 
-        return cmd, last
+        return operate, last

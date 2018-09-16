@@ -50,17 +50,18 @@ class OkexAccount(Account.Account):
             hasNew = True
         return klines, hasNew
 
-    def simulateBuy(self, kline):
-        Log.Log.getInstance().log('buy ')
+    def simulateBuy(self, kline, operate):
+        Log.Log.getInstance().log('buy {0}'.format(kline.print_kline()))
         if float(self.account.get('usdt', 0)) < 10:
             pass
         else:
             count = float(self.account['usdt']) / float(kline._close)
             self.account['btc'] = float(count * (1 - self.fax))
-            Log.Log.getInstance().log('buy {0} btc cost {1} usdt'.format(self.account['btc'], float(self.account['usdt'])))
+            Log.Log.getInstance().log('buy {0} btc cost {1} usdt through {2}'.format(self.account['btc'], float(self.account['usdt']), operate.description))
             self.account['usdt'] = 0
 
     def simulateSell(self, kline):
+        Log.Log.getInstance().log('sell {0}'.format(kline.print_kline()))
         if float(self.account.get('btc', 0)) < 0.0001:
             pass
         else:

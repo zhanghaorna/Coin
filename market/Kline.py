@@ -33,3 +33,6 @@ class Kline(object):
     def isSiCha(self):
         return self.cha == 1
 
+    def simple_kline(self):
+        str = 'date:{0} close:{1}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(self._date) / 1000)), self._close)
+        return str

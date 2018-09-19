@@ -18,15 +18,11 @@ class Macd(object):
     def __init__(self):
         print()
 
-
     def getMacdInfo(self, klines):
         if len(klines) == 0:
             raise RuntimeError('Macd分析必须有足够的数据')
 
         assert isinstance(klines, list)
-
-        klines = sorted(klines, key=attrgetter('_date'))
-
         prices = []
         for kline in klines:
              prices.append(kline._close)
@@ -40,7 +36,7 @@ class Macd(object):
 
         kdj.getKdjInfo(klines)
 
-        klines.reverse()
+        klines = sorted(klines, key=attrgetter('_date'), reverse=True)
 
         for i in range(0, len(klines) - 1):
             if klines[i].macd > 0 and klines[i+1].macd < 0:
@@ -119,7 +115,6 @@ class Macd(object):
                 if KlineUtil.KlineUtil.findRangeBelowValue(olds, 0, indexes[1], 0):
                     return Operate.Operate("buy", "海底捞月")
 
-
         #rule7 死叉卖出?
         if new.macd < 0 and olds[0].macd > 0:
             return Operate.Operate("sell", "死叉")
@@ -135,16 +130,16 @@ class Macd(object):
         operate = self.macdTech(last, olds)
 
         if operate.cmd != "see":
-            self.next_operate = operate
+            self.next_operate = operate.clone()
 
         if self.next_operate.cmd == "buy":
-            if last.k < 18:
+            if last.k < 20:
                 operate = self.next_operate
             else:
                 operate.cmd = "see"
                 operate.description = "观望"
         if self.next_operate.cmd == "sell":
-            if last.k > 82:
+            if last.k > 80:
                 operate = self.next_operate
             else:
                 operate.cmd = "see"

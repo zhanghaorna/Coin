@@ -2,6 +2,7 @@ from account import Account
 from market import Kline
 import requests
 from log import Log
+from operator import attrgetter
 
 class OkexAccount(Account.Account):
 
@@ -26,6 +27,8 @@ class OkexAccount(Account.Account):
         klines = []
         for kline in r.json():
             klines.append(Kline.Kline(kline[0], kline[1], kline[2], kline[3], kline[4], kline[5]))
+
+        klines = sorted(klines, key=attrgetter('_date'))
 
         return klines
 

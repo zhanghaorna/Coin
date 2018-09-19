@@ -4,16 +4,28 @@ from account import OkexAccount
 from account import FcoinAccount
 import configparser
 from strategy import Macd
+from strategy import Kdj
 import time
 from log import Log
 
 macd = Macd.Macd()
+kdj = Kdj.Kdj()
 
 def strategy(account, klines, strategy, simulate):
-    if strategy == "macd":
+    if strategy == 'macd':
         operate, kline = macd.getCmd(klines)
-        print(operate.cmd)
-        kline.print_kline()
+        if simulate:
+            if operate.cmd == "buy":
+                account.simulateBuy(kline, operate)
+            elif operate.cmd == "sell":
+                account.simulateSell(kline)
+        else:
+            if operate.cmd == "buy":
+                account.buy(1)
+            elif operate.cmd == "sell":
+                account.sell(1)
+    elif strategy == 'kdj':
+        operate, kline = kdj.getCmd(klines)
         if simulate:
             if operate.cmd == "buy":
                 account.simulateBuy(kline, operate)
@@ -26,7 +38,7 @@ def strategy(account, klines, strategy, simulate):
                 account.sell(1)
 
 
-def simulateMarket(account):
+def simulateMarket(account, strate):
     klines = account.getSimulateKlines()
     # klines = macd.getMacdInfo(klines)
     # for kline in klines:
@@ -35,16 +47,16 @@ def simulateMarket(account):
 
     while len(klines) > 200:
         sublines = klines[0:200]
-        strategy(account, sublines, "macd", True)
+        strategy(account, sublines, strate, True)
         klines.pop(0)
 
-def realMarket(account):
+def realMarket(account, strategy):
     while True:
         try:
             klines, hasNew = account.getKlines()
             print(hasNew)
             if hasNew is True:
-                strategy(account, klines, "macd", False)
+                strategy(account, klines, strategy, False)
         except Exception as ex:
             Log.Log.getInstance().log('run error {0}'.format(ex))
         finally:
@@ -64,7 +76,8 @@ def run(market, apiKey, secret):
     cf.read('config.ini')
     account.ruler(cf)
     simulate = cf.get('strategy', 'simulate')
-
+    strategy = cf.get('strategy', 'strategy')
+    print(strategy)
 
     #如果模拟盘
     if simulate == '1':
@@ -73,10 +86,10 @@ def run(market, apiKey, secret):
         coinCount = cf.get('simulation', 'count')
         account.fax = float(fax)
         account.account[coinType] = coinCount
-        simulateMarket(account)
+        simulateMarket(account, strategy)
     #实盘
     else:
-        realMarket(account)
+        realMarket(account, strategy)
 
 def main(argv):
     cf = configparser.ConfigParser()

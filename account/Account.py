@@ -21,10 +21,10 @@ class Account(object):
         raise NotImplementedError()
 
     #买币
-    def buy(self, ratio):
+    def buy(self, ratio, kline):
         raise NotImplementedError()
 
-    def sell(self, ratio):
+    def sell(self, ratio, kline):
         raise NotImplementedError()
 
     def initWithKeySecret(self, key, secret):

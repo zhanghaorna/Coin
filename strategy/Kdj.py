@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import talib
 import numpy as np
+from strategy import Macd
 from operator import attrgetter
 from strategy import Operate
 
@@ -9,6 +10,7 @@ class Kdj(object):
     def __init__(self):
         print()
 
+    @classmethod
     def getKdjInfo(self, klines):
         if len(klines) == 0:
             raise RuntimeError('kdj分析必须有足够的数据')
@@ -29,6 +31,8 @@ class Kdj(object):
             kline.k = k
             kline.d = d
 
+        Macd.Macd.getMacdInfo(klines)
+
         klines = sorted(klines, key=attrgetter('_date'), reverse=True)
 
         return klines
@@ -38,10 +42,12 @@ class Kdj(object):
 
         last = klines[1]
         operate = Operate.Operate("see", "观望")
-        if last.k < 20:
+        if last.k < 10:
             operate = Operate.Operate("buy", "kdj买入")
         elif last.k > 80:
-            operate =  Operate.Operate("sell", "kdj卖出")
+            operate = Operate.Operate("sell", "kdj卖出")
 
-        return operate,last
+        print(last.k)
+
+        return operate,klines[0]
 

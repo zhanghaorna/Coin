@@ -79,8 +79,7 @@ class FcoinAccount(Account.Account):
             self.account[coin['currency']] = coin['available']
         return self.account
 
-
-    def buy(self, ratio):
+    def buy(self, ratio, kline):
         account = self.getAccountBalance()
         if float(account.get(self.quote, 0)) < 5 and False:
             pass
@@ -94,8 +93,9 @@ class FcoinAccount(Account.Account):
             sellOne = ticker['ticker'][4]
             #挂单卖一价(先看看收益,之后在看看要不要改为买一)
             Log.Log.getInstance().log('buy order {0} in price {1} ratio {2}'.format(self.base, sellOne, ratio))
+            Log.Log.getInstance().log(kline.print_kline())
 
-    def sell(self, ratio):
+    def sell(self, ratio, kline):
         account = self.getAccountBalance()
         if float(account.get(self.base, 0)) < 0.0001 and False:
             pass
@@ -109,3 +109,4 @@ class FcoinAccount(Account.Account):
             buyOne = ticker['ticker'][2]
             #挂单买一价(立即卖出)
             Log.Log.getInstance().log('sell order {0} in price {1} ratio {2}'.format(self.base, buyOne, ratio))
+            Log.Log.getInstance().log(kline.print_kline())

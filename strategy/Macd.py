@@ -9,8 +9,6 @@ import utils.GlobalModel as gl
 from utils import KlineUtil
 from strategy import Operate
 
-kdj = Kdj.Kdj()
-
 class Macd(object):
 
     next_operate = Operate.Operate("see", "观望")
@@ -18,6 +16,7 @@ class Macd(object):
     def __init__(self):
         print()
 
+    @classmethod
     def getMacdInfo(self, klines):
         if len(klines) == 0:
             raise RuntimeError('Macd分析必须有足够的数据')
@@ -34,7 +33,7 @@ class Macd(object):
             kline.dea = dea
             kline.macd = macd
 
-        kdj.getKdjInfo(klines)
+        Kdj.Kdj.getKdjInfo(klines)
 
         klines = sorted(klines, key=attrgetter('_date'), reverse=True)
 

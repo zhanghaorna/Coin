@@ -33,9 +33,9 @@ def strategy(account, klines, strategy, simulate):
                 account.simulateSell(kline)
         else:
             if operate.cmd == "buy":
-                account.buy(1)
+                account.buy(1, kline)
             elif operate.cmd == "sell":
-                account.sell(1)
+                account.sell(1, kline)
 
 
 def simulateMarket(account, strate):
@@ -50,13 +50,13 @@ def simulateMarket(account, strate):
         strategy(account, sublines, strate, True)
         klines.pop(0)
 
-def realMarket(account, strategy):
+def realMarket(account, strate):
     while True:
         try:
             klines, hasNew = account.getKlines()
             print(hasNew)
             if hasNew is True:
-                strategy(account, klines, strategy, False)
+                strategy(account, klines, strate, False)
         except Exception as ex:
             Log.Log.getInstance().log('run error {0}'.format(ex))
         finally:
@@ -77,7 +77,6 @@ def run(market, apiKey, secret):
     account.ruler(cf)
     simulate = cf.get('strategy', 'simulate')
     strategy = cf.get('strategy', 'strategy')
-    print(strategy)
 
     #如果模拟盘
     if simulate == '1':

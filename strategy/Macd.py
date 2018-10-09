@@ -22,6 +22,8 @@ class Macd(object):
             raise RuntimeError('Macd分析必须有足够的数据')
 
         assert isinstance(klines, list)
+        klines = sorted(klines, key=attrgetter('_date'))
+
         prices = []
         for kline in klines:
              prices.append(kline._close)
@@ -32,8 +34,6 @@ class Macd(object):
             kline.dif = dif
             kline.dea = dea
             kline.macd = macd
-
-        Kdj.Kdj.getKdjInfo(klines)
 
         klines = sorted(klines, key=attrgetter('_date'), reverse=True)
 
@@ -122,6 +122,7 @@ class Macd(object):
 
     def getCmd(self, klines):
         klines = self.getMacdInfo(klines)
+        Kdj.Kdj.getKdjInfo(klines)
 
         last = klines[1]
         olds = klines[2:]

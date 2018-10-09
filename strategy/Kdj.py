@@ -17,6 +17,8 @@ class Kdj(object):
 
         assert isinstance(klines, list)
 
+        klines = sorted(klines, key=attrgetter('_date'))
+
         close = []
         high = []
         low = []
@@ -31,14 +33,13 @@ class Kdj(object):
             kline.k = k
             kline.d = d
 
-        Macd.Macd.getMacdInfo(klines)
-
         klines = sorted(klines, key=attrgetter('_date'), reverse=True)
 
         return klines
 
     def getCmd(self, klines):
         klines = self.getKdjInfo(klines)
+        Macd.Macd.getMacdInfo(klines)
 
         last = klines[1]
         operate = Operate.Operate("see", "观望")
